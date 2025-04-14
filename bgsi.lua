@@ -659,20 +659,24 @@ end
 -- AUTO HATCH EGGS
 --------------------------------
 
-local function GetBestEquippedPetPower()
+local function GetBestPetMultipliers()
+    local best = {
+        Bubble = 0,
+        Coin = 0,
+        Gem = 0
+    }
     local pets = LocalPlayer:FindFirstChild("Pets")
-    local maxPower = 0
-
     if pets then
         for _, pet in pairs(pets:GetChildren()) do
-            if pet:FindFirstChild("Power") then
-                local power = tonumber(pet.Power.Value) or 0
-                maxPower = math.max(maxPower, power)
-            end
+            local b = pet:FindFirstChild("Bubble") and tonumber(pet.Bubble.Value) or 0
+            local c = pet:FindFirstChild("Coin") and tonumber(pet.Coin.Value) or 0
+            local g = pet:FindFirstChild("Gem") and tonumber(pet.Gem.Value) or 0
+            if b > best.Bubble then best.Bubble = b end
+            if c > best.Coin then best.Coin = c end
+            if g > best.Gem then best.Gem = g end
         end
     end
-
-    return maxPower
+    return best
 end
 
 local function AutoHatchEggs()
@@ -692,18 +696,18 @@ local function AutoHatchEggs()
         infinite = false
     end
 
-    local bestPower = GetBestEquippedPetPower()
-    print("Current best pet power: " .. bestPower)
+    local bestStats = GetBestPetMultipliers()
+    print("Best Bubble:", bestStats.Bubble, "| Coin:", bestStats.Coin, "| Gem:", bestStats.Gem)
 
-    if infinite then
-        while true do
-            local eggName = orderToUse[1]
-            local eggData = Eggs[eggName]
-            if eggData then
-                print("Moving to " .. eggName)
+    for _, eggName in ipairs(orderToUse) do
+        local eggData = Eggs[eggName]
+        if eggData and eggData.maxMultipliers then
+            local max = eggData.maxMultipliers
+            if max.Bubble <= bestStats.Bubble and max.Coin <= bestStats.Coin and max.Gem <= bestStats.Gem then
+                print("⚠️ Skipping " .. eggName .. " (Max multipliers too weak)")
+            else
+                print("✅ Hatching " .. eggName .. " (Bubble: " .. max.Bubble .. ", Coin: " .. max.Coin .. ", Gem: " .. max.Gem .. ")")
                 SafeMoveTo(eggData.pos)
-
-                print("Infinitely hatching " .. eggName)
                 for i = 1, getgenv().Config.MaxHatchAttempts do
                     SpamEKey(getgenv().Config.ESpamDuration)
                     RemoteEvent:FireServer("EggHatch", eggName)
@@ -711,26 +715,10 @@ local function AutoHatchEggs()
                 end
             end
         end
-    else
-        for _, eggName in ipairs(orderToUse) do
-            local eggData = Eggs[eggName]
-            if eggData then
-                if (eggData.maxPower or 0) <= bestPower then
-                    print("⚠️ Skipping " .. eggName .. " (Max pet power: " .. eggData.maxPower .. " is ≤ " .. bestPower .. ")")
-                else
-                    print("✅ Hatching " .. eggName .. " (Max pet power: " .. eggData.maxPower .. ")")
-                    SafeMoveTo(eggData.pos)
-                    for i = 1, getgenv().Config.MaxHatchAttempts do
-                        SpamEKey(getgenv().Config.ESpamDuration)
-                        RemoteEvent:FireServer("EggHatch", eggName)
-                        task.wait(0.1)
-                    end
-                end
-            end
-        end
-        print("🎉 Finished checking and hatching all valid eggs.")
     end
+    print("🎉 Finished filtered egg hatching.")
 end
+
 
 --------------------------------
 -- AUTO EQUIP BEST PETS
