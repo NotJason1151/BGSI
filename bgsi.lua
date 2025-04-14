@@ -659,6 +659,7 @@ end
 -- AUTO HATCH EGGS
 --------------------------------
 
+-- 🧠 Helper: Get best multipliers from inventory
 local function GetBestPetMultipliers()
     local best = {
         Bubble = 0,
@@ -679,6 +680,7 @@ local function GetBestPetMultipliers()
     return best
 end
 
+-- 🥚 Updated AutoHatchEggs with multiplier logic
 local function AutoHatchEggs()
     local function SafeMoveTo(position)
         local _, hrp, humanoid = WaitForCharacter()
@@ -703,9 +705,7 @@ local function AutoHatchEggs()
         local eggData = Eggs[eggName]
         if eggData and eggData.maxMultipliers then
             local max = eggData.maxMultipliers
-            if max.Bubble <= bestStats.Bubble and max.Coin <= bestStats.Coin and max.Gem <= bestStats.Gem then
-                print("⚠️ Skipping " .. eggName .. " (Max multipliers too weak)")
-            else
+            if max.Bubble > bestStats.Bubble or max.Coin > bestStats.Coin or max.Gem > bestStats.Gem then
                 print("✅ Hatching " .. eggName .. " (Bubble: " .. max.Bubble .. ", Coin: " .. max.Coin .. ", Gem: " .. max.Gem .. ")")
                 SafeMoveTo(eggData.pos)
                 for i = 1, getgenv().Config.MaxHatchAttempts do
@@ -713,11 +713,14 @@ local function AutoHatchEggs()
                     RemoteEvent:FireServer("EggHatch", eggName)
                     task.wait(0.1)
                 end
+            else
+                print("⚠️ Skipping " .. eggName .. " (Max multipliers too weak)")
             end
         end
     end
     print("🎉 Finished filtered egg hatching.")
 end
+
 
 
 --------------------------------
